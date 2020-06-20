@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 import os
 from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
 from PIL import Image
 import matplotlib.pyplot as plt
 import torch
@@ -37,13 +38,12 @@ import torchvision.transforms as transforms
 # In[2]:
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-print(device)
 
 
 # In[3]:
 
 
-BASE_PATH = '/'
+BASE_PATH = 'images/'
 
 
 # In[4]:
@@ -55,40 +55,21 @@ labels = []
 
 for file in os.listdir(BASE_PATH):
     
-    if file == 'Coleoptera':
-        for c in os.listdir(os.path.join(BASE_PATH, file)):
-            if c!='annotations':
-                images.append(c)
-                labels.append('Coleoptera')
+    file_class = file[0:file.find('_')]
     
-    if file == 'Diptera':
-        for c in os.listdir(os.path.join(BASE_PATH, file)):
-            if c!='annotations':
-                images.append(c)
-                labels.append('Diptera')
-    
-    if file == 'Hymenoptera':
-        for c in os.listdir(os.path.join(BASE_PATH, file)):
-            if c!='annotations':
-                images.append(c)
-                labels.append('Hymenoptera')
-    
-    if file == 'Lepidoptera':
-        for c in os.listdir(os.path.join(BASE_PATH, file)):
-            if c!='annotations':
-                images.append(c)
-                labels.append('Lepidoptera')
+    images.append(file)
+    labels.append(file_class)
 
-data = {'images': images, 'labels':labels} 
-data = pd.DataFrame(data) 
+data = {'image': images, 'label': labels}
+data = pd.DataFrame(data)
 
 # In[5]:
 
 
 lb = LabelEncoder()
-data['encoded_labels'] = lb.fit_transform(data['labels'])
+data['encoded_label'] = lb.fit_transform(data['label'])
 
-class_types = {0: 'Class1', 1: 'Class2', 2: 'Class3', 3: 'Class4'}
+classes = pd.Series(data['label'].values, index = data['encoded_label']).to_dict()
 
 
 # ## Spliting of Dataset
@@ -100,26 +81,14 @@ validation_split = 0.3
 shuffle_dataset = True
 random_seed = 42
 
-# Creating data indices for training and validation splits:
+# Create data indices for training and validation splits
+train, validation = train_test_split(data['label'], stratify = data['label'], test_size = validation_split)
+train_indices = list(train.index)
+validation_indices = list(validation.index)
 
-# Split using scikit-learn
-# from sklearn.model_selection import train_test_split
-# tr, val = train_test_split(data.label, stratify=data.label, test_size=0.1)
-# train_indices = list(tr.index)
-# val_indices = list(val.index)
-
-# Split from scratch
-dataset_size = len(data)
-indices = list(range(dataset_size))
-split = int(np.floor(validation_split * dataset_size))
-if shuffle_dataset :
-    np.random.seed(random_seed)
-    np.random.shuffle(indices)
-train_indices, val_indices = indices[split:], indices[:split]
-
-# Create PyTorch data samplers and loaders
+# Create PyTorch data samplers
 train_sampler = SubsetRandomSampler(train_indices)
-valid_sampler = SubsetRandomSampler(val_indices)
+validation_sampler = SubsetRandomSampler(validation_indices)
 
 
 # ## Transforms
@@ -161,25 +130,24 @@ transform = transforms.Compose(
 
 class LoadDataset(Dataset):
     
-    def __init__(self, img_data,img_path,transform=None):
+    def __init__(self, img_data, img_path, transform=None):
         
         self.img_path = img_path
         self.transform = transform
         self.img_data = img_data
-        
+    
     def __len__(self):
         
         return len(self.img_data)
     
     def __getitem__(self, index):
         
-        img_name = os.path.join(self.img_path,self.img_data.loc[index, 'labels'],
-                                self.img_data.loc[index, 'images'])
+        img_name = os.path.join(self.img_path, self.img_data.loc[index, 'image'])
         
         image = Image.open(img_name)
-        #image = image.convert('RGB')
+        image = image.convert('RGB')
         image = image.resize((300, 300))
-        label = torch.tensor(self.img_data.loc[index, 'encoded_labels'])
+        label = torch.tensor(self.img_data.loc[index, 'encoded_label'])
         if self.transform is not None:
             image = self.transform(image)
         return image, label
@@ -188,22 +156,19 @@ class LoadDataset(Dataset):
 # In[11]:
 
 
+# Create PyTorch data loaders
+
 dataset = LoadDataset(data, BASE_PATH, transform)
 
-
-# In[12]:
-
-
-train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=train_sampler)
-
-validation_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=valid_sampler)
+train_loader = torch.utils.data.DataLoader(dataset, batch_size = batch_size, sampler = train_sampler)
+validation_loader = torch.utils.data.DataLoader(dataset, batch_size = batch_size, sampler = validation_sampler)
 
 
 # In[13]:
 
 
 def img_display(img):
-    img = img / 2 + 0.5 # unnormalize
+    img = img / 2 + 0.5 # Unnormalize
     npimg = img.numpy()
     npimg = np.transpose(npimg, (1, 2, 0))
     return npimg
@@ -215,31 +180,28 @@ def img_display(img):
 # In[14]:
 
 
-# Get some random training images
-dataiter = iter(train_loader)
-images, labels = dataiter.next()
+# Display random training images
+data_iter = iter(train_loader)
+images, labels = data_iter.next()
 
-# Viewing data examples used for training
 fig, axis = plt.subplots(3, 5, figsize=(15, 10))
+
 for i, ax in enumerate(axis.flat):
+    
     with torch.no_grad():
+        
         image, label = images[i], labels[i]
-        ax.imshow(img_display(image)) # add image
-        ax.set(title = f"{class_types[label.item()]}") # add label
+        ax.imshow(img_display(image))
+        ax.set(title = f"{classes[label.item()]}")
 
 
 # ## The Neural Network
-# In the **Net** class created below, we have constructed a neural network. Construction of the neural network was the second most difficult situation that I faced after constructing a custom dataset. But I am going to explain you everything step by step.<br>
-# * Inside the **init()** method you declare each layer with a unique layer name. For every unique layer, declaring its input features and output features is a must. At least the input feature is a must for some of the layers like batch normalization.
-# * Inside the **forward(self, x)** method you need to connect the layers that were declared in the init method. One thing must be kept in mind that the output feature of one layer is an input feature of its next connecting layer.
-# 
-# 
-
-# **TIP** - If you are facing difficulty in constructing a neural network class, then I hope this tip would be very much helpful.<br><br>
-# Before laying your hands on PyTorch I hope you would be familiar with **Keras**( another python library for deep-learning ). And if you are not, then please go practice Keras first as it allows the simplest way of implementing a deep learning model in python.<br><br>
-# In Keras after implementing a neural network with Model API, there is a command called "Model.summary()" which gives you the entire structure of the neural network that you have created along with the number of parameters. Keep that summary side by side while constructing your network class in PyTorch, things would get much easier. It would be much easier to see that network summary, name the layers according to it and connect them concerning their input and output features in PyTorch. It was helpful in my case, and I hope It would be helpful to you also.
-# ![image](https://encrypted-tbn0.gstatic.com/images?q=tbn%3AANd9GcQylY4AqnlZcpGxTSj7h8tG5ZeUESvLa9MLk51PDDHwkACgirUc)
-# <br>Link to the model whose summary I used to construct my PyTorch model - [ Classifying Cursive hiragana(崩し字) KMNIST using CNN](https://www.kaggle.com/gpreda/classifying-cursive-hiragana-kmnist-using-cnn)
+# In the **Net** class created below, we have constructed a neural network.
+# * Inside the **init()** method you declare each layer with a unique layer name.
+# For every unique layer, declaring its input features and output features is a must.
+# At least the input feature is a must for some of the layers like batch normalization.
+# Inside the **forward(self, x)** method you need to connect the layers that were declared in the init method.
+# One thing must be kept in mind that the output feature of one layer is an input feature of its next connecting layer.
 
 # In[15]:
 
@@ -297,7 +259,7 @@ print(model)
 
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.0001)
+optimizer = optim.Adam(model.parameters(), lr = 0.0001)
 
 
 # In[18]:
@@ -443,8 +405,6 @@ model.load_state_dict(torch.load('model_classification.pt'))
 dataiter = iter(validation_loader)
 images, labels = dataiter.next()
 
-class_types = {0: 'Class1', 1: 'Class2', 2: 'Class3', 3: 'Class4'}
-
 # Viewing data examples used for training
 fig, axis = plt.subplots(3, 5, figsize=(15, 10))
 
@@ -458,4 +418,4 @@ with torch.no_grad():
         output_ = model(image_tensor)
         output_ = output_.argmax()
         k = output_.item()==label.item()
-        ax.set_title(str(class_types[label.item()])+":" +str(k)) # add label
+        ax.set_title(str(classes[label.item()])+":" +str(k)) # add label
