@@ -147,7 +147,7 @@ class LoadDataset(Dataset):
         image = Image.open(img_name)
         image = image.convert('RGB')
         image = image.resize((300, 300))
-        label = torch.tensor(self.img_data.loc[index, 'encoded_label'])
+        label = torch.tensor(self.img_data.loc[index, 'encoded_label'], dtype=torch.long, device=device)
         if self.transform is not None:
             image = self.transform(image)
         return image, label
@@ -224,7 +224,7 @@ class Net(nn.Module):
         self.batchnorm3 = nn.BatchNorm2d(64)
         self.fc1 = nn.Linear(64*5*5, 512)
         self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, 4)
+        self.fc3 = nn.Linear(256, 3)
     
     def forward(self, x):
         
@@ -236,7 +236,7 @@ class Net(nn.Module):
         x = x.view(-1, 64*5*5) # Flatten layer
         x = self.dropout(self.fc1(x))
         x = self.dropout(self.fc2(x))
-        x = F.log_softmax(self.fc3(x),dim = 1)
+        x = F.log_softmax(self.fc3(x), dim = 1)
         
         return x
 
@@ -310,7 +310,7 @@ for epoch in range(1, n_epochs+1):
         
         # Forward + backward + optimize
         outputs = model(data_)
-        loss = criterion(outputs, target_)
+        loss = criterion(outputs, target_.long())
         loss.backward()
         optimizer.step()
         
@@ -342,7 +342,7 @@ for epoch in range(1, n_epochs+1):
                 data_t, target_t = data_t.to(device), target_t.to(device)
             
             outputs_t = model(data_t)
-            loss_t = criterion(outputs_t, target_t)
+            loss_t = criterion(outputs_t, target_t.long())
             batch_loss += loss_t.item()
             _,pred_t = torch.max(outputs_t, dim=1)
             correct_t += torch.sum(pred_t==target_t).item()
