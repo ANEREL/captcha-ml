@@ -24,6 +24,7 @@ for path, label in [('./data/clock/', 1), ('./data/done/', 0)]: #('./data/anti/'
 X = np.array(X)
 y = np.array(y)
 
+num_classes = 2
 y = keras.utils.to_categorical(y, num_classes)
 #%%
     
@@ -53,7 +54,6 @@ x = keras.layers.Conv2D(filters=32, kernel_size=(5, 5), activation="relu")(x)
 x = keras.layers.GlobalAveragePooling2D()(x)
 
 # Add a dense classifier on top
-num_classes = 2
 outputs = keras.layers.Dense(num_classes, activation="softmax")(x)
 
 model = keras.Model(inputs=inputs, outputs=outputs)
