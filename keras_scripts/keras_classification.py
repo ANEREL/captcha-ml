@@ -23,6 +23,8 @@ for path, label in [('./data/clock/', 1), ('./data/done/', 0)]: #('./data/anti/'
         y.append(label)
 X = np.array(X)
 y = np.array(y)
+
+y = keras.utils.to_categorical(y, num_classes)
 #%%
     
 from sklearn.model_selection import train_test_split
@@ -37,26 +39,26 @@ plt.imshow(img[:, :, 0], cmap='gray')
 
 #%%
 
-# # Model 1:
+# Model 1:
 
-# inputs = keras.Input(shape=(450, 400, 1))
-# # Apply some convolution and pooling layers
-# x = keras.layers.Conv2D(filters=32, kernel_size=(5, 5), activation="relu")(inputs)
-# x = keras.layers.MaxPooling2D(pool_size=(3, 3))(x)
-# x = keras.layers.Conv2D(filters=32, kernel_size=(5, 5), activation="relu")(x)
-# x = keras.layers.MaxPooling2D(pool_size=(3, 3))(x)
-# x = keras.layers.Conv2D(filters=32, kernel_size=(5, 5), activation="relu")(x)
+inputs = keras.Input(shape=(450, 400, 1))
+# Apply some convolution and pooling layers
+x = keras.layers.Conv2D(filters=32, kernel_size=(5, 5), activation="relu")(inputs)
+x = keras.layers.MaxPooling2D(pool_size=(3, 3))(x)
+x = keras.layers.Conv2D(filters=32, kernel_size=(5, 5), activation="relu")(x)
+x = keras.layers.MaxPooling2D(pool_size=(3, 3))(x)
+x = keras.layers.Conv2D(filters=32, kernel_size=(5, 5), activation="relu")(x)
 
-# # Apply global average pooling to get flat feature vectors
-# x = keras.layers.GlobalAveragePooling2D()(x)
+# Apply global average pooling to get flat feature vectors
+x = keras.layers.GlobalAveragePooling2D()(x)
 
-# # Add a dense classifier on top
-# num_classes = 2
-# outputs = keras.layers.Dense(num_classes, activation="softmax")(x)
+# Add a dense classifier on top
+num_classes = 2
+outputs = keras.layers.Dense(num_classes, activation="softmax")(x)
 
-# model = keras.Model(inputs=inputs, outputs=outputs)
+model = keras.Model(inputs=inputs, outputs=outputs)
 
-# print(model.summary())
+print(model.summary())
 
 #%%
 
@@ -79,28 +81,27 @@ plt.imshow(img[:, :, 0], cmap='gray')
 
 # print(model.summary())
 
-num_classes = 2
-
-model = keras.Sequential(
-    [
-        keras.Input(shape=(450, 400, 1)),
-        keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
-        keras.layers.MaxPooling2D(pool_size=(2, 2)),
-        keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
-        keras.layers.MaxPooling2D(pool_size=(2, 2)),
-        keras.layers.Flatten(),
-        keras.layers.Dropout(0.5),
-        keras.layers.Dense(num_classes, activation="softmax"),
-    ]
-)
-
-model.summary()
-
 #%%
-print(len(X_train))
-#%%
-y_train = keras.utils.to_categorical(y_train, num_classes)
-y_test = keras.utils.to_categorical(y_test, num_classes)
+
+# Model 3:
+
+# num_classes = 2
+
+# model = keras.Sequential(
+#     [
+#         keras.Input(shape=(450, 400, 1)),
+#         keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+#         keras.layers.MaxPooling2D(pool_size=(2, 2)),
+#         keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+#         keras.layers.MaxPooling2D(pool_size=(2, 2)),
+#         keras.layers.Flatten(),
+#         keras.layers.Dropout(0.5),
+#         keras.layers.Dense(num_classes, activation="softmax"),
+#     ]
+# )
+
+# model.summary()
+
 #%%
 model.compile(optimizer='adam', loss='mse', metrics=["accuracy", tf.keras.metrics.AUC()]) #categorical_crossentropy
 
