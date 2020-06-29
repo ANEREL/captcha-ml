@@ -16,7 +16,7 @@ X = []
 y = []
 
 
-for path, label in [('./data/clock/', 1), ('./data/anti/', -1), ('./data/done/', 0)]:
+for path, label in [('./data/clock/', [0,0,1]), ('./data/anti/', [0,1,0]), ('./data/done/', [1,0,0])]:
     for f in listdir(path):
         img = cv2.imread(join(path, f))
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -26,7 +26,7 @@ for path, label in [('./data/clock/', 1), ('./data/anti/', -1), ('./data/done/',
         X.append(img)
         y.append(label)
 X = np.array(X)
-y = np.array(y)
+y = np.array(y, dtype=float)
 
 num_classes = 3
 
@@ -41,8 +41,8 @@ X_train, X_val, y_train, y_val = train_test_split(X, y, train_size = 0.8, test_s
 # X_val, X_test, y_val, y_test = train_test_split(X_val, y_val, train_size = 0.5, test_size = 0.5)
 
 # convert class vectors to binary class matrices
-y_train = keras.utils.to_categorical(y_train, num_classes)
-y_val = keras.utils.to_categorical(y_val, num_classes)
+# y_train = keras.utils.to_categorical(y_train, num_classes)
+# y_val = keras.utils.to_categorical(y_val, num_classes)
 # y_test = keras.utils.to_categorical(y_test, num_classes)
 
 
@@ -78,11 +78,22 @@ model.fit(X_train, y_train,
           verbose=1,
           validation_data=(X_val, y_val), 
           callbacks=[EarlyStopping(patience=10)])
+#%%
 
-score = model.evaluate(X_test, y_test, verbose = 0)
+# y_pred = model.predict_classes(X_test)
+# y_test_classes = np.argmax(y_test, axis=1)
 
-print('Test loss:', score[0])
-print('Test accuracy:', score[1])
+#%%
+
+# from sklearn.metrics import classification_report, confusion_matrix
+
+# print(confusion_matrix(y_test_classes,y_pred))
+
+#%%
+# score = model.evaluate(X_test, y_test, verbose = 0)
+
+# print('Test loss:', score[0])
+# print('Test accuracy:', score[1])
 
 #%%
 
