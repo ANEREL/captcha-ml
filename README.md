@@ -1,11 +1,8 @@
 # captcha-ml
 Beating new age captchas using Machine Learning
 
-## TODO:
+## Instructions
 
-Get a testing set that is an unseen animal
-- If it does fine, we good.
-- Otherwise, get more animals.
-
-Setup selenium on our own environment to watch it play.
-Setup selenium on the real environment to watch it play.
+Label data using the p5js environment
+Train and save CNN using keras script 2
+Load and run all cells in jupyter notebook
