@@ -22,8 +22,19 @@ for path, label in [('./data/clock/', [0,1]), ('./data/anti/', [0,1]), ('./data/
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img = img[200:550,275:625]
         img = cv2.resize(img, (48,48))
+        img = img[8:40,8:40]
+        img_flipped = cv2.flip(img, 1)
+        
         img = np.expand_dims(img, axis=2)
         X.append(img)
+        y.append(label)
+        
+        img_flipped = np.expand_dims(img_flipped, axis=2)
+        X.append(img_flipped)
+        y.append(label)
+        
+        
+        X.append(img_flipped)
         y.append(label)
 X = np.array(X)
 y = np.array(y, dtype=float)
@@ -54,7 +65,7 @@ plt.imshow(X_train[0,:,:,0], cmap='gray')
 
 #%%
 
-input_shape = (48, 48, 1)
+input_shape = (32, 32, 1)
 
 model = Sequential()
 model.add(Conv2D(32, kernel_size=(3, 3),
